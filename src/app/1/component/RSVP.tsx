@@ -6,7 +6,7 @@ const RSVP = () => {
   const [name, setName] = useState("");
   const [attending, setAttending] = useState("");
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     alert(`Thank you, ${name}! RSVP recorded.`);
   };

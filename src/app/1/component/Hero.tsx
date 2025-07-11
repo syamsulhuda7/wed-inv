@@ -22,7 +22,9 @@ const Hero = () => {
   }: rendererData) => {
     if (completed) {
       // Render a completed state
-      return <span className="text-2xl font-bold">It's Wedding Day! 🎉</span>;
+      return (
+        <span className="text-2xl font-bold">It&apos;s Wedding Day! 🎉</span>
+      );
     } else {
       // Render a countdown
       return (
@@ -63,7 +65,7 @@ const Hero = () => {
         backgroundImage: "url('/hero.jpg')",
       }}
     >
-      <h1 className="text-4xl md:text-6xl font-bold">You're Invited</h1>
+      <h1 className="text-4xl md:text-6xl font-bold">You&apos;re Invited</h1>
       <p className="mt-4 text-lg md:text-2xl">To the wedding of</p>
       <h2 className="mt-2 text-3xl md:text-5xl font-script">Emma & David</h2>
       <p className="mt-4 text-lg">Saturday, June 15, 2024</p>
