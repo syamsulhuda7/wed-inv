@@ -15,7 +15,7 @@ function formatDateToString(date: Date): string {
 }
 
 const Hero = () => {
-  const targetDate = new Date("2025-07-13T00:40:20+07:00");
+  const targetDate = new Date("2025-07-13T00:45:20+07:00");
 
   // Renderer callback
   const renderer = ({
