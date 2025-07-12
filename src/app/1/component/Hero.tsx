@@ -1,8 +1,15 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import React from "react";
+import React, { useEffect } from "react";
+
+// Dynamic import Countdown supaya tidak SSR
 const Countdown = dynamic(() => import("react-countdown"), { ssr: false });
+
+// Tambahkan ini di file Hero.tsx (paling atas)
+interface NotificationOptionsWithVibrate extends NotificationOptions {
+  vibrate?: number[]; // deklarasikan vibrate sebagai array number
+}
 
 function formatDateToString(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -10,14 +17,59 @@ function formatDateToString(date: Date): string {
     month: "long",
     day: "numeric",
     year: "numeric",
-    timeZone: "Asia/Jakarta",
+    timeZone: "Asia/Jakarta", // GMT+7
   }).format(date);
 }
 
 const Hero = () => {
-  const targetDate = new Date("2025-07-13T00:50:20+07:00");
+  const targetDate = new Date("2025-07-13T01:09:20+07:00");
 
-  // Renderer callback
+  // Request permission & register Service Worker
+  useEffect(() => {
+    if ("Notification" in window) {
+      Notification.requestPermission().then((permission) => {
+        console.log("🔔 Notifikasi permission:", permission);
+      });
+    }
+
+    // Daftarkan Service Worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => console.log("✅ Service Worker terdaftar:", reg.scope))
+        .catch((err) => console.error("❌ Gagal daftar SW:", err));
+    }
+  }, []);
+
+  const handleComplete = () => {
+    console.log("🎉 Countdown selesai!");
+
+    // Kirim notifikasi melalui Service Worker jika ada
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.showNotification("🎉 Selamat! Hari H Telah Tiba!", {
+          body: "Klik untuk melihat detail acara.",
+          icon: "/wedding-icon.png", // icon di public/
+          vibrate: [200, 100, 200, 100, 200], // Getar
+        } as NotificationOptionsWithVibrate);
+
+        // Mainkan suara notifikasi (di client)
+        const audio = new Audio("/notif-sound.mp3"); // letakkan di public/
+        audio.play();
+      });
+    } else if ("Notification" in window) {
+      // Fallback kalau tidak ada SW
+      new Notification("🎉 Selamat! Hari H Telah Tiba!", {
+        body: "Klik untuk melihat detail acara.",
+        icon: "/wedding-icon.png",
+        vibrate: [200, 100, 200],
+      } as NotificationOptionsWithVibrate);
+      const audio = new Audio("/notif-sound.mp3");
+      audio.play();
+    }
+  };
+
+  // Renderer countdown
   const renderer = ({
     days,
     hours,
@@ -67,20 +119,6 @@ const Hero = () => {
     }
   };
 
-  // Kirim notifikasi ketika countdown selesai
-  const handleComplete = () => {
-    if ("Notification" in window) {
-      Notification.requestPermission().then((permission) => {
-        if (permission === "granted") {
-          new Notification("🎉 Selamat! Hari H Telah Tiba!", {
-            body: "Klik untuk melihat detail acara.",
-            icon: "/wedding-icon.png",
-          });
-        }
-      });
-    }
-  };
-
   return (
     <section
       className="h-screen bg-cover bg-center flex flex-col justify-center items-center text-white"
@@ -96,7 +134,7 @@ const Hero = () => {
       <Countdown
         date={targetDate}
         renderer={renderer}
-        onComplete={handleComplete} // ✅ Trigger notifikasi saat selesai
+        onComplete={handleComplete}
       />
 
       <a
