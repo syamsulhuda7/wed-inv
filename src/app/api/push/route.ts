@@ -55,10 +55,10 @@
 
 //   return NextResponse.json({ message: "Push sent" }, { status: 200 });
 // }
-
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
-import webpush from "web-push";
+import webpush, { PushSubscription } from "web-push"; // ✅ import tipe PushSubscription
+import { Collection } from "mongodb";
 
 webpush.setVapidDetails(
   process.env.VAPID_SUBJECT!,
@@ -70,7 +70,9 @@ export async function POST() {
   try {
     const client = await clientPromise;
     const db = client.db("wedding");
-    const collection = db.collection("subscriptions");
+    const collection = db.collection(
+      "subscriptions"
+    ) as unknown as Collection<PushSubscription>;
 
     const subscriptions = await collection.find().toArray();
 
@@ -82,10 +84,13 @@ export async function POST() {
     });
 
     const results = await Promise.allSettled(
-      subscriptions.map((sub: any) =>
-        webpush.sendNotification(sub, payload).catch((err) => {
-          console.error("❌ Push error:", err);
-        })
+      subscriptions.map(
+        (
+          sub: PushSubscription // ✅ gunakan tipe PushSubscription
+        ) =>
+          webpush.sendNotification(sub, payload).catch((err) => {
+            console.error("❌ Push error:", err);
+          })
       )
     );
 
