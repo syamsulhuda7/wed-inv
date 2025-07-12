@@ -1,14 +1,13 @@
 "use client";
-
-import dynamic from "next/dynamic";
 import React, { useEffect } from "react";
+import dynamic from "next/dynamic";
+import { name, targetDate } from "@/app/1/utils/data";
+import { base64ToUint8Array } from "@/app/1/utils/base64Utils";
 
-// Dynamic import Countdown supaya tidak SSR
 const Countdown = dynamic(() => import("react-countdown"), { ssr: false });
 
-// Tambahkan ini di file Hero.tsx (paling atas)
 interface NotificationOptionsWithVibrate extends NotificationOptions {
-  vibrate?: number[]; // deklarasikan vibrate sebagai array number
+  vibrate?: number[];
 }
 
 function formatDateToString(date: Date): string {
@@ -21,55 +20,133 @@ function formatDateToString(date: Date): string {
   }).format(date);
 }
 
+// async function subscribeToPush() {
+//   if ("serviceWorker" in navigator) {
+//     const registration = await navigator.serviceWorker.ready;
+//     const existingSub = await registration.pushManager.getSubscription();
+
+//     if (!existingSub) {
+//       const newSub = await registration.pushManager.subscribe({
+//         userVisibleOnly: true,
+//         applicationServerKey: urlBase64ToUint8Array(
+//           process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+//         ),
+//       });
+
+//       // Simpan ke backend
+//       await fetch("/api/subscribe", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify(newSub),
+//       });
+
+//       console.log("📩 User subscribed:", newSub);
+//     } else {
+//       console.log("✅ User sudah subscribe");
+//     }
+//   }
+// }
+
+// function urlBase64ToUint8Array(base64String: string) {
+//   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+//   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+
+//   const rawData = atob(base64);
+//   const outputArray = new Uint8Array(rawData.length);
+
+//   for (let i = 0; i < rawData.length; ++i) {
+//     outputArray[i] = rawData.charCodeAt(i);
+//   }
+//   return outputArray;
+// }
+
 const Hero = () => {
-  const targetDate = new Date("2025-07-13T01:09:20+07:00");
-
-  // Request permission & register Service Worker
   useEffect(() => {
-    if ("Notification" in window) {
-      Notification.requestPermission().then((permission) => {
-        console.log("🔔 Notifikasi permission:", permission);
-      });
-    }
+    if (typeof window !== "undefined") {
+      // Request Notification permission
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+      }
 
-    // Daftarkan Service Worker
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then((reg) => console.log("✅ Service Worker terdaftar:", reg.scope))
-        .catch((err) => console.error("❌ Gagal daftar SW:", err));
+      if ("serviceWorker" in navigator && "PushManager" in window) {
+        navigator.serviceWorker.register("/sw.js").then(async (reg) => {
+          console.log("✅ Service Worker registered:", reg.scope);
+
+          const permission = await Notification.requestPermission();
+          console.log("🔔 Notification permission:", permission);
+
+          if (permission === "granted") {
+            const sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: base64ToUint8Array(
+                process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+              ),
+            });
+
+            await fetch("/api/subscribe", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(sub),
+            });
+
+            console.log("📩 Push subscription sent:", sub);
+          }
+        });
+      }
     }
   }, []);
 
-  const handleComplete = () => {
+  // useEffect(() => {
+  //   if (typeof window !== "undefined") {
+  //     if ("Notification" in window) {
+  //       if (Notification.permission === "default") {
+  //         Notification.requestPermission().then((permission) => {
+  //           console.log("🔔 Notification permission:", permission);
+  //         });
+  //       }
+  //     }
+
+  //     if ("serviceWorker" in navigator) {
+  //       navigator.serviceWorker
+  //         .register("/sw.js")
+  //         .then((reg) =>
+  //           console.log("✅ Service Worker registered:", reg.scope)
+  //         )
+  //         .catch((err) => console.error("❌ Service Worker failed:", err));
+  //     }
+  //   }
+  // }, []);
+
+  const handleComplete = async () => {
     console.log("🎉 Countdown selesai!");
 
-    // Kirim notifikasi melalui Service Worker jika ada
-    if ("serviceWorker" in navigator && "PushManager" in window) {
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.showNotification("🎉 Selamat! Hari H Telah Tiba!", {
-          body: "Klik untuk melihat detail acara.",
-          icon: "/wedding-icon.png", // icon di public/
-          vibrate: [200, 100, 200, 100, 200], // Getar
-        } as NotificationOptionsWithVibrate);
+    if (typeof window !== "undefined") {
+      // Cek apakah sudah pernah kirim notifikasi
+      const alreadyNotified = localStorage.getItem("wedding_notified");
+      if (alreadyNotified === "yes") {
+        console.log("⚠️ Sudah pernah kirim notifikasi, skip");
+        return;
+      }
 
-        // Mainkan suara notifikasi (di client)
-        const audio = new Audio("/notif-sound.mp3"); // letakkan di public/
-        audio.play();
-      });
-    } else if ("Notification" in window) {
-      // Fallback kalau tidak ada SW
-      new Notification("🎉 Selamat! Hari H Telah Tiba!", {
-        body: "Klik untuk melihat detail acara.",
-        icon: "/wedding-icon.png",
-        vibrate: [200, 100, 200],
-      } as NotificationOptionsWithVibrate);
-      const audio = new Audio("/notif-sound.mp3");
-      audio.play();
+      if ("Notification" in window && Notification.permission === "granted") {
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.ready.then((registration) => {
+            registration.showNotification("🎉 Selamat! Hari H Telah Tiba!", {
+              body: "Klik untuk melihat detail acara.",
+              icon: "/wedding-icon.png",
+              vibrate: [200, 100, 200],
+              data: { url: "/1" },
+            } as NotificationOptionsWithVibrate);
+
+            // ✅ Set flag sudah kirim notifikasi
+            localStorage.setItem("wedding_notified", "yes");
+          });
+        }
+      }
     }
+    await fetch("/api/push", { method: "POST" });
   };
 
-  // Renderer countdown
   const renderer = ({
     days,
     hours,
@@ -92,25 +169,25 @@ const Hero = () => {
         <div className="flex space-x-4 text-center">
           <div>
             <p className="text-4xl font-bold">
-              {days.toString().padStart(2, "0")}
+              {String(days).padStart(2, "0")}
             </p>
             <span>Days</span>
           </div>
           <div>
             <p className="text-4xl font-bold">
-              {hours.toString().padStart(2, "0")}
+              {String(hours).padStart(2, "0")}
             </p>
             <span>Hours</span>
           </div>
           <div>
             <p className="text-4xl font-bold">
-              {minutes.toString().padStart(2, "0")}
+              {String(minutes).padStart(2, "0")}
             </p>
             <span>Minutes</span>
           </div>
           <div>
             <p className="text-4xl font-bold">
-              {seconds.toString().padStart(2, "0")}
+              {String(seconds).padStart(2, "0")}
             </p>
             <span>Seconds</span>
           </div>
@@ -128,7 +205,9 @@ const Hero = () => {
     >
       <h1 className="text-4xl md:text-6xl font-bold">You&apos;re Invited</h1>
       <p className="mt-4 text-lg md:text-2xl">To the wedding of</p>
-      <h2 className="mt-2 text-3xl md:text-5xl font-script">Emma & David</h2>
+      <h2 className="mt-2 text-3xl md:text-5xl font-script">
+        {name.bride} & {name.groom}
+      </h2>
       <p className="my-4 text-lg">{formatDateToString(targetDate)}</p>
 
       <Countdown
