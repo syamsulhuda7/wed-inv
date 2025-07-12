@@ -1,60 +1,83 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import React from "react";
-import Countdown from "react-countdown";
+const Countdown = dynamic(() => import("react-countdown"), { ssr: false });
 
-interface rendererData {
-  days: number;
-  hours: number;
-  minutes: number;
-  seconds: number;
-  completed: boolean;
+function formatDateToString(date: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "Asia/Jakarta",
+  }).format(date);
 }
 
 const Hero = () => {
-  // Renderer callback with condition
+  const targetDate = new Date("2025-07-13T00:35:20+07:00");
+
+  // Renderer callback
   const renderer = ({
     days,
     hours,
     minutes,
     seconds,
     completed,
-  }: rendererData) => {
+  }: {
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    completed: boolean;
+  }) => {
     if (completed) {
-      // Render a completed state
       return (
         <span className="text-2xl font-bold">It&apos;s Wedding Day! 🎉</span>
       );
     } else {
-      // Render a countdown
       return (
         <div className="flex space-x-4 text-center">
           <div>
             <p className="text-4xl font-bold">
-              {days.toString().length === 1 ? "0" + days : days}
+              {days.toString().padStart(2, "0")}
             </p>
             <span>Days</span>
           </div>
           <div>
             <p className="text-4xl font-bold">
-              {hours.toString().length === 1 ? "0" + hours : hours}
+              {hours.toString().padStart(2, "0")}
             </p>
             <span>Hours</span>
           </div>
           <div>
             <p className="text-4xl font-bold">
-              {minutes.toString().length === 1 ? "0" + minutes : minutes}
+              {minutes.toString().padStart(2, "0")}
             </p>
             <span>Minutes</span>
           </div>
           <div>
             <p className="text-4xl font-bold">
-              {seconds.toString().length === 1 ? "0" + seconds : seconds}
+              {seconds.toString().padStart(2, "0")}
             </p>
             <span>Seconds</span>
           </div>
         </div>
       );
+    }
+  };
+
+  // Kirim notifikasi ketika countdown selesai
+  const handleComplete = () => {
+    if ("Notification" in window) {
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") {
+          new Notification("🎉 Selamat! Hari H Telah Tiba!", {
+            body: "Klik untuk melihat detail acara.",
+            icon: "/wedding-icon.png",
+          });
+        }
+      });
     }
   };
 
@@ -68,15 +91,14 @@ const Hero = () => {
       <h1 className="text-4xl md:text-6xl font-bold">You&apos;re Invited</h1>
       <p className="mt-4 text-lg md:text-2xl">To the wedding of</p>
       <h2 className="mt-2 text-3xl md:text-5xl font-script">Emma & David</h2>
-      <p className="mt-4 text-lg">Saturday, June 15, 2024</p>
-      <Countdown date={Date.now() + 62000} renderer={renderer} />
-      <div className="mt-6 flex space-x-2">
-        {/* Countdown Timer Placeholder */}
-        <div>20 Days</div>
-        <div>15 Hours</div>
-        <div>32 Minutes</div>
-        <div>10 Seconds</div>
-      </div>
+      <p className="my-4 text-lg">{formatDateToString(targetDate)}</p>
+
+      <Countdown
+        date={targetDate}
+        renderer={renderer}
+        onComplete={handleComplete} // ✅ Trigger notifikasi saat selesai
+      />
+
       <a
         href="#our-story"
         className="mt-10 bg-white text-gray-800 px-6 py-2 rounded-full shadow hover:bg-gray-100"

@@ -6,12 +6,9 @@ const Gallery = () => {
     <section className="py-16 bg-white text-center">
       <h2 className="text-3xl md:text-4xl font-semibold mb-8">Photo Gallery</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
-        {/* Replace these with real image URLs */}
-        <Image src="/photo1.jpg" alt="photo1" />
-        <Image src="/photo2.jpg" alt="photo2" />
-        <Image src="/photo3.jpg" alt="photo3" />
-        {/* <img src="/photo2.jpg" alt="Gallery 2" className="rounded shadow" />
-        <img src="/photo3.jpg" alt="Gallery 3" className="rounded shadow" /> */}
+        <Image width={300} height={200} src="/photo1.jpg" alt="photo1" />
+        <Image width={300} height={200} src="/photo2.jpg" alt="photo2" />
+        <Image width={300} height={200} src="/photo3.jpg" alt="photo3" />
       </div>
     </section>
   );
